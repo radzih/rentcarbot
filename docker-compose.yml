@@ -1,0 +1,57 @@
+version: '3.3'
+
+services:
+  bot:
+    image: "${BOT_IMAGE_NAME:-tg_bot-image}"
+    container_name: carbot
+    stop_signal: SIGINT
+    build:
+      context: .
+    working_dir: "/usr/src/app/${BOT_NAME:-tg_bot}"
+    volumes:
+    - .:/usr/src/app/${BOT_NAME:-tg_bot}
+    command: python3 -m bot
+    restart: always
+    env_file:
+      - ".env"
+    networks:
+    - tg_bot
+
+  django:
+    container_name: django_car
+    build: 
+      context: .
+    working_dir: "/usr/src/app/${BOT_NAME:-tg_bot}"
+    volumes:
+      - .:/usr/src/app/${BOT_NAME:-tg_bot}
+    command: python django_manage.py runserver 0:8000 --noreload
+    ports:
+      - '8000:8000'
+    depends_on:
+      - db
+    env_file:
+      - '.env'
+    networks:
+      - tg_bot
+
+  db:
+    container_name: database_car
+    hostname: db
+    image: postgres:10.5
+
+    environment:
+      - POSTGRES_DB=$DB_NAME
+      - POSTGRES_USER=$DB_USER
+      - POSTGRES_PASSWORD=$DB_PASS
+    restart: always
+    networks:
+      - tg_bot
+    env_file:
+      - ".env"
+    volumes:
+      - ./postgres:/var/lib/postgresql
+
+
+networks:
+  tg_bot:
+    driver: bridge
